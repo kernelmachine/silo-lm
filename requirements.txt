@@ -1,0 +1,6 @@
+torch
+xformers
+tqdm
+git+https://github.com/kernelmachine/transformers@openlm#egg=transformers
+zstandard
+datasets==2.3.2
