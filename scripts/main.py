@@ -275,10 +275,10 @@ def process(args, lm, task, subset):
                               code_size=64,
                               probe=args.probe)
 
-            if args.remove_embed:
+            if args.remove_embed and os.path.exists(embed_path):
                 os.remove(embed_path)
 
-            if prev_index_path and args.remove_prev_index:
+            if prev_index_path and args.remove_prev_index and os.path.exists(prev_index_path):
                 os.remove(prev_index_path)
 
             if args.skip_eval:
