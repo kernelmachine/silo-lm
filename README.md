@@ -35,7 +35,7 @@ For any questions related to the code, data, models or the paper, please leave [
 
 ## Quick links
 
-You can access the Open License Corpus and pretrained SILO Models on Huggingface :hugs:
+You can access the Open License Corpus and pretrained SILO Models on Hugging Face :hugs:
 
 * Link to the [Open License Corpus](https://huggingface.co/datasets/kernelmachine/open-license-corpus)
 * Link to [SILO-PD-1.3B](https://huggingface.co/kernelmachine/silo-pd-1.3b)
