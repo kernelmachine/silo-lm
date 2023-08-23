@@ -17,6 +17,7 @@ def create_model(cfg):
         pos_embed_type=cfg.pos_embed_type,
         weight_tying=cfg.weight_tying,
         attn_type=cfg.attn_type,
+        apply_qk_norm=cfg.apply_qk_norm
     )
     model = Transformer(model_args)
 

@@ -15,6 +15,7 @@ class OpenLMConfig(PretrainedConfig):
         pos_embed_type: str = "rope",
         weight_tying: bool = False,
         attn_type: str = 'xformers',
+        apply_qk_norm: bool = False
         **kwargs
     ):
         
@@ -27,6 +28,7 @@ class OpenLMConfig(PretrainedConfig):
         self.pos_embed_type = pos_embed_type
         self.weight_tying = weight_tying
         self.attn_type = attn_type
+        self.apply_qk_norm = apply_qk_norm
         super().__init__(**kwargs)
 
 
