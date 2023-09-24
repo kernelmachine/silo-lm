@@ -39,6 +39,7 @@ class EvaluatingWrapper():
         self.max_len = 0
         self.dstore_targets = dstore_targets
         self.inter_lambda = args.inter_lambda
+        assert self.inter_lambda != 0 
 
 
     def init_label2word_id(self, label2synonym):
