@@ -52,16 +52,6 @@ class EvaluatingWrapper():
             label2synonym_id[k] = torch.LongTensor(synonym_id).cuda()
         return label2synonym_id
 
-    def save_score(self, klambda2result, klambda2predictions_list, scoring_func):
-        # save scores
-        results_path = f'{self.args.output_dir}/{scoring_func}_{self.args.split}.accs'
-        with open(results_path, 'w') as out:
-            out.write(json.dumps(klambda2result))
-
-        # save predicted labels
-        preds_path = f'{self.args.output_dir}/{scoring_func}_{self.args.split}.preds'
-        with open(preds_path, 'w') as out:
-            out.write(json.dumps(klambda2predictions_list))
 
     def print_overview(self):
         # print the first example to make sure the format is ok

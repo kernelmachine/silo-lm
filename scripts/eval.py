@@ -76,8 +76,6 @@ if __name__ == '__main__':
     else:
         model_name = args.model
 
-    Path(args.output_dir).mkdir(exist_ok=True, parents=True)
-
     model, tokenizer = load_model(args.model)
     knn_model, knn_tokenizer = load_model(args.knn_model)
 
