@@ -237,7 +237,7 @@ There are a few hyperparameters you can explore, e.g., `--ensemble_k`, which use
 
 
 ### Downstream tasks evals
-We currently support these downstream tasks: `agn, amazon, cr, dbpedia, hyp, mr, rotten_tomatoes, rte, sste, yelp`
+We currently support these downstream tasks: `agn, amazon, cr, dbpedia, hyp, mr, rotten_tomatoes, rte, sst2, yelp`
 
 For downstream tasks, you need to specify the datastore you want to use (raw_file, index_path). There are several parameters you can explore including `K` (number of retrieved tokens), `KNN_TEMP` (temperature for kNN distribution), `inter_lambda` (interpolation lambda). 
 
