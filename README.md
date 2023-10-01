@@ -237,16 +237,23 @@ There are a few hyperparameters you can explore, e.g., `--ensemble_k`, which use
 
 
 ### Downstream tasks evals
-We currently support these downstream tasks: `agn, amazon, cr, dbpedia, hyp, mr, rotten_tomatoes, rte, sst2, yelp`
+We currently support these downstream tasks: `agn, amazon, cr, dbpedia, hyp, mr, rotten_tomatoes, rte, sst2, yelp`.
 
+#### Process IMDB data 
+
+Donwload IMDB corpus using the following the command. 
+```
+python scripts/download_data.py --subset imdb --split train
+```
+Then you can follow the above instruction to encode and build index of the corpus. 
+
+#### Run downstream tasks evaluation
 For downstream tasks, you need to specify the datastore you want to use (raw_file, index_path). There are several parameters you can explore including `K` (number of retrieved tokens), `KNN_TEMP` (temperature for kNN distribution), `inter_lambda` (interpolation lambda). 
+Here is one example to run evaluation on `cr` using `amazon` corpus. 
 
-For example:
 ```bash
 raw_file="new-amazon" # new-amazon # cc-news # Wikipedia_(en)
 model=kernelmachine/silo-pdsw-1.3b
-index_path=/gscratch/zlab/sewon/nplm-inference/out/ours-v1_1.3B_250B_semibalanced/train-0/new-amazon-1024-512-[0K-2000K].index
-tokenized_dir="/gscratch/zlab/sewon/nplm-inference/out/neoX/train-0"
 dataset=cr
 K=1024
 KNN_TEMP=1
@@ -258,7 +265,6 @@ PYTHONPATH=. python scripts/eval.py \
 --n_sample 3000 \
 --raw_file ${raw_file} \
 --inter_lambda $inter_lambda \
---index_path $index_path \
 --dataset_dir data_eval/benchmark/$dataset \
 --k $K \
 --dataset_name $dataset \

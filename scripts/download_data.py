@@ -9,6 +9,7 @@ from functools import partial
 import argparse
 import subprocess
 from datasets import load_dataset
+from pathlib import Path
 
 from multiprocessing import Pool
 
@@ -28,6 +29,11 @@ def main(args):
         download_mimic()
     elif args.subset=="amazon":
         download_amazon()
+    elif args.subset=="imdb":
+        if args.split == "train":
+            download_imdb()
+        else:
+            assert False, "IMDB only has train split"
     else:
         raise NotImplementedError()
 
@@ -199,6 +205,13 @@ def download_mimic():
         for text in texts[2*val_size:]:
             f.write(json.dumps({"text": text})+"\n")
 
+
+def download_imdb():
+    Path(DATA_DIR).mkdir(exist_ok=True, parents=True)
+    download_gdrive_file("1uZ7sdYqrpwIr5558zpuA-HTTb1VmubG-", f"{DATA_DIR}/imdb/train.jsonl")
+
+
+
 def download_cc_news():
     cc_news = load_dataset('cc_news', split="train")
 
@@ -260,13 +273,13 @@ def download_gdrive_file(_id, dest):
         else:
             print("Unzip {} ... [Success]".format(dest))
 
-
+# https://drive.google.com/file/d/1uZ7sdYqrpwIr5558zpuA-HTTb1VmubG-/view?usp=sharing
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--subset",
                         type=str,
                         default=None,
-                        choices=["the-pile", "cc-news", "MIMIC_III", "amazon"])
+                        choices=["the-pile", "cc-news", "MIMIC_III", "amazon", "imdb"])
     parser.add_argument("--split",
                         type=str,
                         default="train,val,test")

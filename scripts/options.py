@@ -49,3 +49,6 @@ class Options():
         self.parser.add_argument("--dataset_dir", type=str, default="data_eval/benchmark")
         self.parser.add_argument("--split", type=str, default="test")
         self.parser.add_argument("--n_sample", type=int, default=3000)
+        self.parser.add_argument("--output_dir", type=str, default="out")
+        self.parser.add_argument("--merge", action="store_true", default=True)
+

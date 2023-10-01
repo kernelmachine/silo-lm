@@ -75,14 +75,38 @@ if __name__ == '__main__':
         model_name = args.model.rsplit("/", 1)[1]
     else:
         model_name = args.model
+    args.output_dir = os.path.join(args.output_dir, model_name)
+    if not os.path.exists(args.output_dir):
+        os.makedirs(args.output_dir)
+
 
     model, tokenizer = load_model(args.model)
     knn_model, knn_tokenizer = load_model(args.knn_model)
 
     args_knn = Args({"split": "train", "stride": 512, "max_seq_length": 1024, "subset": args.raw_file, "max_n_sequences": 100, "embed_idx": domain2idx[args.raw_file]})    
 
-    tokenized_dir = args.tokenized_dir
+    # define tokenized_dir and index_path
+    tokenized_dir = args.output_dir
     tokenized_path = os.path.join(tokenized_dir, "{}-tokenized.pkl".format(args.raw_file))
+    postfix = "{}-{}".format(args_knn.max_seq_length, "none")
+
+    if args.max_n_sequences is not None:
+        start = args_knn.max_n_sequences * args_knn.embed_idx
+        end = args_knn.max_n_sequences * (1 + args_knn.embed_idx)
+        s_postfix = "-[{}K-{}K]".format(start, end)
+
+        s_postfix_index = "-[0K-{}K]".format(end)
+        s_postfix_prev_index = "-[0K-{}K]".format(start) if start>0 else None
+
+        if args_knn.embed_idx > 0:
+            s_postfix_prev_embeds = ["-[{}K-{}K]".format(args_knn.max_n_sequences*i, args_knn.max_n_sequences*(i+1)) for i in range(args_knn.embed_idx)]
+    else:
+        s_postfix = ""
+        s_postfix_index = ""
+        s_postfix_prev_index = None
+        s_postfix_prev_embeds = None
+
+    index_path = os.path.join(args.output_dir, "{}-{}.index".format(args_knn.subset, postfix + s_postfix_index))
     DIMENSION = 2048
     index_path = args.index_path # domain2index[subset]
 
