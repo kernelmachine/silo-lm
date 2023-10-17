@@ -284,7 +284,10 @@ class EvaluatingWrapper():
                     final_prob = self.combine_knn_and_vocab_probs(label2knn_prob, label2LM_prob, _lambda)
                     final_prob_domain = self.combine_knn_and_vocab_probs(domain_label2knn_prob, domain_label2LM_prob, _lambda)
                     final_prob_pmi = np.log(final_prob+1e-10) - np.log(final_prob_domain+1e-10)
-                    label2prob_pmi = self.vocab2label(final_prob_pmi, self.label2word_id) #self.label2synonym_id)  # ablate fuzzy verbalizer
+                    if self.args.no_fuzzy_verbalizer:
+                        label2prob_pmi = self.vocab2label(final_prob_pmi, self.label2word_id) 
+                    else:
+                        label2prob_pmi = self.vocab2label(final_prob_pmi, self.label2synonym_id)
                     pred_silo = torch.argmax(label2prob_pmi).item()
                     all_pred_silo[(_lambda, knn_temp)].append(pred_silo)
 

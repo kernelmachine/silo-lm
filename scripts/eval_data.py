@@ -87,8 +87,6 @@ def load_label(path):
 
     # trim to the same length
     min_len = min([len(v) for v in label2token.values()])
-    # min_len = 1
-    # print("Rulin: Disabling fuzzy verbalizer for ablation study")
     for k, v in label2token.copy().items():
         label2token[k] = v[:min_len]
     # print("label2token: ", label2token)
