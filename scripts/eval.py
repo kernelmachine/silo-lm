@@ -65,70 +65,77 @@ if __name__ == '__main__':
     args = options.parser.parse_args()
     os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 
-    random.seed(args.seed)
-    np.random.seed(args.seed)
-    torch.manual_seed(args.seed)
-    torch.cuda.manual_seed(args.seed)
-    torch.cuda.manual_seed_all(args.seed)
 
-    if "/" in args.model:
-        model_name = args.model.rsplit("/", 1)[1]
-    else:
-        model_name = args.model
-    args.output_dir = os.path.join(args.output_dir, model_name)
-    if not os.path.exists(args.output_dir):
-        os.makedirs(args.output_dir)
+    with open(args.log_file_name, "a+") as log_file:
+        sys.stdout = log_file
+        random.seed(args.seed)
+        np.random.seed(args.seed)
+        torch.manual_seed(args.seed)
+        torch.cuda.manual_seed(args.seed)
+        torch.cuda.manual_seed_all(args.seed)
+
+        if "/" in args.model:
+            model_name = args.model.rsplit("/", 1)[1]
+        else:
+            model_name = args.model
+        args.output_dir = os.path.join(args.output_dir, model_name)
+        if not os.path.exists(args.output_dir):
+            os.makedirs(args.output_dir)
 
 
-    model, tokenizer = load_model(args.model)
-    knn_model, knn_tokenizer = load_model(args.knn_model)
+        model, tokenizer = load_model(args.model)
+        # knn_model, knn_tokenizer = load_model(args.knn_model)
 
-    args_knn = Args({"split": "train", "stride": 512, "max_seq_length": 1024, "subset": args.raw_file, "max_n_sequences": 100, "embed_idx": domain2idx[args.raw_file]})    
+        args_knn = Args({"split": "train", "stride": 512, "max_seq_length": 1024, "subset": args.raw_file, "max_n_sequences": 100, "embed_idx": domain2idx[args.raw_file]})    
 
-    # define tokenized_dir and index_path
-    tokenized_dir = args.output_dir
-    tokenized_path = os.path.join(tokenized_dir, "{}-tokenized.pkl".format(args.raw_file))
-    postfix = "{}-{}".format(args_knn.max_seq_length, "none")
+        # define tokenized_dir and index_path
+        tokenized_dir = args.tokenized_dir
+        tokenized_path = os.path.join(tokenized_dir, "{}-tokenized.pkl".format(args.raw_file))
+        postfix = "{}-{}".format(args_knn.max_seq_length, "none")
 
-    if args.max_n_sequences is not None:
-        start = args_knn.max_n_sequences * args_knn.embed_idx
-        end = args_knn.max_n_sequences * (1 + args_knn.embed_idx)
-        s_postfix = "-[{}K-{}K]".format(start, end)
+        args.max_n_sequences = 100
+        print(f"Rulin hardcoded max_n_sequences to be {args.max_n_sequences}")
+        if args.max_n_sequences is not None:
+            start = args_knn.max_n_sequences * args_knn.embed_idx
+            end = args_knn.max_n_sequences * (1 + args_knn.embed_idx)
+            s_postfix = "-[{}K-{}K]".format(start, end)
 
-        s_postfix_index = "-[0K-{}K]".format(end)
-        s_postfix_prev_index = "-[0K-{}K]".format(start) if start>0 else None
+            s_postfix_index = "-[0K-{}K]".format(end)
+            s_postfix_prev_index = "-[0K-{}K]".format(start) if start>0 else None
 
-        if args_knn.embed_idx > 0:
-            s_postfix_prev_embeds = ["-[{}K-{}K]".format(args_knn.max_n_sequences*i, args_knn.max_n_sequences*(i+1)) for i in range(args_knn.embed_idx)]
-    else:
-        s_postfix = ""
-        s_postfix_index = ""
-        s_postfix_prev_index = None
-        s_postfix_prev_embeds = None
+            if args_knn.embed_idx > 0:
+                s_postfix_prev_embeds = ["-[{}K-{}K]".format(args_knn.max_n_sequences*i, args_knn.max_n_sequences*(i+1)) for i in range(args_knn.embed_idx)]
+        else:
+            s_postfix = ""
+            s_postfix_index = ""
+            s_postfix_prev_index = None
+            s_postfix_prev_embeds = None
 
-    index_path = os.path.join(args.output_dir, "{}-{}.index".format(args_knn.subset, postfix + s_postfix_index))
-    DIMENSION = 2048
-    index_path = args.index_path # domain2index[subset]
+        index_path = os.path.join(args.output_dir, "{}-{}.index".format(args_knn.subset, postfix + s_postfix_index))
+        DIMENSION = 2048
+        index_path = args.index_path # domain2index[subset]
 
-    dstore_targets = get_flatten_targets(tokenized_path, split=args_knn.split, args=args_knn)
-    dstore_size = len(dstore_targets)
-    print("dstore_size: ", dstore_size)
+        dstore_targets = get_flatten_targets(tokenized_path, split=args_knn.split, args=args_knn)
+        dstore_size = len(dstore_targets)
+        print("dstore_size: ", dstore_size)
+        print("eval task: ", args.dataset_name)
+        print("index domain: ", args.raw_file)
 
-    dstore = DataStore(embed_path=None,
-                        index_path=index_path,
-                        trained_index_path=None,
-                        prev_index_path=None,
-                        prev_embed_paths=None,
-                        dstore_size=dstore_size,
-                        dimension=DIMENSION,
-                        dtype=np.float16,
-                        ncentroids=4096,
-                        code_size=64,
-                        probe=8)
+        dstore = DataStore(embed_path=None,
+                            index_path=index_path,
+                            trained_index_path=None,
+                            prev_index_path=None,
+                            prev_embed_paths=None,
+                            dstore_size=dstore_size,
+                            dimension=DIMENSION,
+                            dtype=np.float16,
+                            ncentroids=4096,
+                            code_size=64,
+                            probe=8)
 
-    examples, closed_label_space = load_test_data(args)
-    eval_wrapper = EvaluatingWrapper(model=model, encoder=tokenizer, knn_model=knn_model, knn_tokenizer=knn_tokenizer, examples=examples, knn_dstore=dstore, dstore_targets=dstore_targets, args=args)
-    eval_wrapper.score()
+        examples, closed_label_space = load_test_data(args)
+        eval_wrapper = EvaluatingWrapper(model=model, encoder=tokenizer, knn_model=model, knn_tokenizer=tokenizer, examples=examples, knn_dstore=dstore, dstore_targets=dstore_targets, args=args)
+        eval_wrapper.optimal_config_score()
 
 
 

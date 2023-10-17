@@ -36,6 +36,7 @@ class Options():
                         help="For fp16: Apex AMP optimization level selected in ['O0', 'O1', 'O2', and 'O3']."
                         "See details at https://nvidia.github.io/apex/amp.html",)
         self.parser.add_argument("--load_cache", type=int, default=1)
+        self.parser.add_argument("--log_file_name", type=str, default="default.out")
 
 
     def add_model(self):
