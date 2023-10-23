@@ -22,8 +22,6 @@ class Options():
         self.parser.add_argument('--k', type=int, default=300)
         self.parser.add_argument("--scoring", type=str, default="softmax")
         self.parser.add_argument("--inter_lambda", type=float, default=0.3)
-        self.parser.add_argument("--no_fuzzy_verbalizer", action='store_true')
-        self.parser.add_argument("--search_hyper_parameters", action='store_true')
 
 
     def initialize_parser(self):

@@ -135,10 +135,7 @@ if __name__ == '__main__':
 
         examples, closed_label_space = load_test_data(args)
         eval_wrapper = EvaluatingWrapper(model=model, encoder=tokenizer, knn_model=model, knn_tokenizer=tokenizer, examples=examples, knn_dstore=dstore, dstore_targets=dstore_targets, args=args)
-        if args.search_hyper_parameters:
-            eval_wrapper.optimal_config_score()
-        else:
-            eval_wrapper.score()
+        eval_wrapper.optimal_config_score()
 
 
 

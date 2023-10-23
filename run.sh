@@ -20,7 +20,5 @@ do
         --index_path /gscratch/zlab/sewon/nplm-inference/out/ours-v1_1.3B_250B_semibalanced/train-0/$raw_file-1024-512-[0K-2000K].index \
         --tokenized_dir /gscratch/zlab/sewon/nplm-inference/out/neoX/train-0 \
         --output_dir out \
-        --log_file_name out/search_config_$raw_file.out \
-        --no_fuzzy_verbalizer \
-        --search_hyper_parameters
+        --log_file_name out/search_config_$raw_file.out
 done
