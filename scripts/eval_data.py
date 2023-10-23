@@ -87,8 +87,6 @@ def load_label(path):
 
     # trim to the same length
     min_len = min([len(v) for v in label2token.values()])
-    # min_len = 1
-    # print("Rulin: Disabling fuzzy verbalizer for ablation study")
     for k, v in label2token.copy().items():
         label2token[k] = v[:min_len]
     # print("label2token: ", label2token)
@@ -345,9 +343,6 @@ def load_examples_cr(path):
                 o['uncond_hypothesis'] = h.lower()
                 options.append(o)
             similarity = float(row["similarity"]) if "similarity" in row else None
-            # print(f"label: {label}")
-            # print(f"label_list: {label2index}")
-            # print(label_list[label] in label2synonym[label])
             examples.append({'options': options, 'label': label, "sim": similarity, 'label2synonym': label2synonym, 'label_list': label2index})
     return examples
 

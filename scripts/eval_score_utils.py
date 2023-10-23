@@ -39,8 +39,7 @@ class EvaluatingWrapper():
         self.max_len = 0
         self.dstore_targets = dstore_targets
         self.inter_lambda = args.inter_lambda
-        if self.inter_lambda == 0:
-            print("Warning: Using interpolation lamda 0")
+        assert self.inter_lambda != 0 
 
 
     def init_label2word_id(self, label2synonym):
@@ -73,7 +72,6 @@ class EvaluatingWrapper():
 
 
     def combine_knn_and_vocab_probs(self, knn_p, vocab_p, knn_lambda):
-        # print(self.args.scoring)
         if self.args.scoring.startswith("log_softmax"):
             combine_probs = torch.stack([vocab_p, knn_p], dim=0)
             coeffs = torch.ones_like(combine_probs)
@@ -89,13 +87,13 @@ class EvaluatingWrapper():
         return (torch.squeeze(mmax, dim=dim) +
                 torch.log(torch.mean(torch.exp((x - mmax)), dim=dim)))
  
-    def get_knn_scores(self, outputs, knn_temp):
+    def get_knn_scores(self, outputs):
         queries = outputs['hidden_states'][-1][:, -1, :].cpu().numpy()
         all_scores, all_indices = self.knn_dstore.search(queries, k=self.args.k)
-        dists = torch.from_numpy(-all_scores).cuda()  # check this
+        dists = torch.from_numpy(all_scores).cuda()
         knn_ids = np.array(self.dstore_targets[all_indices])
 
-        probs = torch.softmax(dists / knn_temp, dim=-1)
+        probs = torch.softmax(dists / self.args.knn_temp, dim=-1)
         probs = probs.detach().cpu().numpy()
 
         probs = probs.squeeze()
@@ -149,7 +147,6 @@ class EvaluatingWrapper():
         return results, predictions_dict
 
     def compute_LM_prob4tokens(self, outputs):
-        # compuate softmax
         logits = outputs.logits[:, :].contiguous()
         if self.args.scoring.startswith("logsoftmax_"):
             last_token_softmax = torch.log_softmax(logits[:, -1, :], dim=-1)
@@ -159,38 +156,29 @@ class EvaluatingWrapper():
         return last_token_softmax
 
 
-    def eval_one_ex(self, input_texts, knn_input_texts, knn_temp=None, knn_only=False):
-        if knn_temp is None:
-            knn_temp = self.args.knn_temp
+    def eval_one_ex(self, input_texts, knn_input_texts):
+        inputs = self.encoder.encode_plus(input_texts, return_tensors="pt").to("cuda")
+        input_ids = inputs["input_ids"]
 
-        knn_inputs = self.encoder.encode_plus(knn_input_texts, return_tensors="pt").to("cuda")  # bc assumes same tokenizer?
+        knn_inputs = self.encoder.encode_plus(knn_input_texts, return_tensors="pt").to("cuda")
         knn_input_ids = knn_inputs["input_ids"]
+
+        if len(input_ids[0]) > 1024:
+            input_ids = input_ids[0][-1024:]
+            input_ids = input_ids.unsqueeze(0)
 
         if len(knn_input_ids[0]) > 1024:
             knn_input_ids = knn_input_ids[0][-1024:]
             knn_input_ids = knn_input_ids.unsqueeze(0)
 
-        with torch.no_grad():
-            # get kNN outputs
-            knn_outputs = self.knn_model(knn_input_ids, output_hidden_states=True)
-            label2knn_prob = self.get_knn_scores(knn_outputs, knn_temp)  # vocab, 1
-        
-        if not knn_only:
-            inputs = self.encoder.encode_plus(input_texts, return_tensors="pt").to("cuda")
-            input_ids = inputs["input_ids"]
 
-            # hard-coded to be within 1024 context length
-            if len(input_ids[0]) > 1024:  
-                input_ids = input_ids[0][-1024:]
-                input_ids = input_ids.unsqueeze(0)
-            
-            with torch.no_grad():
-                # get LM outputs
-                outputs = self.model(input_ids, output_hidden_states=True)
-                label2LM_prob = self.compute_LM_prob4tokens(outputs) # vocab, 1
-                label2LM_prob = label2LM_prob.cpu().numpy()
-            return label2LM_prob, label2knn_prob
-        return None, label2knn_prob
+        with torch.no_grad():
+            outputs = self.model(input_ids, output_hidden_states=True)
+            label2LM_prob = self.compute_LM_prob4tokens(outputs) # vocab, 1
+            label2LM_prob = label2LM_prob.cpu().numpy()
+            knn_outputs = self.knn_model(knn_input_ids, output_hidden_states=True)
+            label2knn_prob = self.get_knn_scores(knn_outputs)  # vocab, 1
+        return label2LM_prob, label2knn_prob
  
 
 
@@ -213,11 +201,7 @@ class EvaluatingWrapper():
 
         # compute domain prior
         domain_text = self.examples[0]["options"][0]["uncond_premise"]
-        print(f"domain text: {domain_text}")
         domain_label2LM_prob, domain_label2knn_prob = self.eval_one_ex(domain_text, domain_text)
-        print(f"domain_label2LM_prob: {domain_label2LM_prob.shape} shape \n {domain_label2LM_prob}")
-        print(f"domain_label2knn_prob: {domain_label2knn_prob.shape} shape \n {domain_label2knn_prob}")
-        print(f"Using interpolation of {self.inter_lambda}")
         for ex in tqdm(self.examples):
             all_label.append(ex["label"])
             input_text = ex["options"][0]["premise"]
@@ -232,7 +216,7 @@ class EvaluatingWrapper():
             final_prob = self.combine_knn_and_vocab_probs(label2knn_prob, label2LM_prob, self.inter_lambda)
             final_prob_domain = self.combine_knn_and_vocab_probs(domain_label2knn_prob, domain_label2LM_prob, self.inter_lambda)
             final_prob_pmi = np.log(final_prob+1e-10) - np.log(final_prob_domain+1e-10)
-            label2prob_pmi = self.vocab2label(final_prob_pmi, self.label2word_id) #self.label2synonym_id)  # ablate fuzzy verbalizer
+            label2prob_pmi = self.vocab2label(final_prob_pmi, self.label2synonym_id)
             pred_silo = torch.argmax(label2prob_pmi).item()
             all_pred_silo.append(pred_silo)
 
@@ -246,59 +230,7 @@ class EvaluatingWrapper():
 
         acc = self.compute_accuracy(all_pred_silo, all_label)
         print("acc: ", acc)
-    
-
-    def optimal_config_score(self):
-        # define search space
-        lambda_list = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
-        temperatures = [1.0, 10.0, 20.0, 25.0, 30.0, 40.0]
-        
-        all_pred_silo = defaultdict(list)      
-        all_label = []
-        all_pred_parametric = []
-        for knn_temp in temperatures:
-            # compute domain prior
-            domain_text = self.examples[0]["options"][0]["uncond_premise"]
-            domain_label2LM_prob, domain_label2knn_prob = self.eval_one_ex(domain_text, domain_text, knn_temp)
-            for ex in tqdm(self.examples):
-                input_text = ex["options"][0]["premise"]
-                knn_input_text = ex["options"][0]["knn_premise"]
-                
-                if knn_temp != temperatures[0]:
-                    # avoid repetitive LM inference
-                    assert label2LM_prob is not None
-                    _, label2knn_prob = self.eval_one_ex(input_text, knn_input_text, knn_temp, knn_only=True) 
-                else:
-                    all_label.append(ex["label"])
-                    
-                    label2LM_prob, label2knn_prob = self.eval_one_ex(input_text, knn_input_text, knn_temp, knn_only=False) 
-                    
-                    final_prob_pmi = np.log(label2LM_prob+1e-10) - np.log(domain_label2LM_prob+1e-10)
-                    label2prob_pmi = self.vocab2label(final_prob_pmi, self.label2word_id)
-                    pred_parametric = torch.argmax(label2prob_pmi).item()
-                    all_pred_parametric.append(pred_parametric)
-
-                for _lambda in lambda_list:
-                    if _lambda == 0.0:
-                        continue
-                    final_prob = self.combine_knn_and_vocab_probs(label2knn_prob, label2LM_prob, _lambda)
-                    final_prob_domain = self.combine_knn_and_vocab_probs(domain_label2knn_prob, domain_label2LM_prob, _lambda)
-                    final_prob_pmi = np.log(final_prob+1e-10) - np.log(final_prob_domain+1e-10)
-                    label2prob_pmi = self.vocab2label(final_prob_pmi, self.label2word_id) #self.label2synonym_id)  # ablate fuzzy verbalizer
-                    pred_silo = torch.argmax(label2prob_pmi).item()
-                    all_pred_silo[(_lambda, knn_temp)].append(pred_silo)
-
-
-        print("=============Parametric Only========================")
-        acc = self.compute_accuracy(all_pred_parametric, all_label)
-        print("acc: ", acc)
-
-        print("=============SILO=====================")
-        # knnlm
-        silo_accs = {k: self.compute_accuracy(v, all_label) for k, v in all_pred_silo.items()}
-        for key, value in sorted(silo_accs.items(), key=lambda x: x[1])[-10:]:
-            print ("%s\tACC=%.3f" % (key, value))
-    
 
     def compute_accuracy(self, all_pred, all_label):
         return round(sum(1 for x, y in zip(all_label, all_pred) if x==y)/len(all_label), 4)
+
