@@ -1,0 +1,2 @@
+neutral, fair, objective
+partisan, biased, unfair

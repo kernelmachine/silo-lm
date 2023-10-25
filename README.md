@@ -235,3 +235,39 @@ This command will first build the BM25 index over the training data, run search 
 
 There are a few hyperparameters you can explore, e.g., `--ensemble_k`, which uses the top k documents instead of top 1 and use them in parallel through an ensembling approach, following the REPLUG recipe. We find this significantly increases run-time while marginally improving PPL, so recommend not specifying it for your first run.
 
+
+### Downstream tasks evals
+We currently support these downstream tasks: `agn, amazon, cr, dbpedia, hyp, mr, rotten_tomatoes, rte, sst2, yelp`.
+
+#### Process IMDB data 
+
+Donwload IMDB corpus using the following the command. 
+```
+python scripts/download_data.py --subset imdb --split train
+```
+Then you can follow the above instruction to encode and build index of the corpus. 
+
+#### Run downstream tasks evaluation
+For downstream tasks, you need to specify the datastore you want to use (raw_file, index_path). There are several parameters you can explore including `K` (number of retrieved tokens), `KNN_TEMP` (temperature for kNN distribution), `inter_lambda` (interpolation lambda). 
+Here is one example to run evaluation on `cr` using `amazon` corpus. 
+
+```bash
+raw_file="new-amazon" # new-amazon # cc-news # Wikipedia_(en)
+model=kernelmachine/silo-pdsw-1.3b
+dataset=cr
+K=1024
+KNN_TEMP=1
+inter_lambda=0.7
+
+PYTHONPATH=. python scripts/eval.py \
+--model ${model}  \
+--knn_model ${model} \
+--n_sample 3000 \
+--raw_file ${raw_file} \
+--inter_lambda $inter_lambda \
+--dataset_dir data_eval/benchmark/$dataset \
+--k $K \
+--dataset_name $dataset \
+--batch_size 5 \
+--knn_temp ${KNN_TEMP} 
+```
