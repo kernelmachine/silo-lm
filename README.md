@@ -44,7 +44,7 @@ You can access the Open License Corpus and pretrained SILO Models on Hugging Fac
 
 ## Training
 
-We use OpenLM, a new model training library, to train SILO LMs. Stay tuned for a link to that repo!
+We use [OpenLM](https://github.com/mlfoundations/open_lm), a new model training library, to train SILO LMs. 
 
 ## Inference
 
